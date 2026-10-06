@@ -1,2 +1,58 @@
-:root { font-family: system-ui, sans-serif; }
-body { margin: 0; }
+:root {
+  --bg: #f6f8fc; --fg: #16213a; --card: #ffffff; --accent: #4f46e5;
+  --accent-fg: #ffffff; --muted: #6b7280; --border: #e5e7eb; --good: #16a34a;
+  --warn: #d97706; --radius: 14px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+[data-theme="dark"] {
+  --bg: #0f172a; --fg: #e2e8f0; --card: #1e293b; --accent: #818cf8;
+  --accent-fg: #0f172a; --muted: #94a3b8; --border: #334155;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+button { cursor: pointer; font: inherit; }
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  background: var(--card); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 20; flex-wrap: wrap;
+}
+.brand { background: none; border: none; font-weight: 800; font-size: 1.1rem; color: var(--fg); }
+.menu-btn { display: none; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; color: var(--fg); }
+.nav { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+.nav-item { background: none; border: none; padding: 8px 12px; border-radius: 10px; color: var(--muted); }
+.nav-item.active { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.top-actions { display: flex; gap: 6px; margin-left: auto; }
+.top-actions button { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; color: var(--fg); }
+.main { width: 100%; max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.hero { text-align: center; padding: 40px 16px 20px; }
+.hero h1 { font-size: clamp(1.8rem, 4vw, 3rem); margin: 0 0 8px; }
+.hero p { color: var(--muted); font-size: 1.1rem; margin: 0 0 20px; }
+.searchbox { display: flex; gap: 8px; max-width: 640px; margin: 0 auto; }
+.searchbox input { flex: 1; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); color: var(--fg); font-size: 1rem; }
+.btn { background: var(--accent); color: var(--accent-fg); border: none; border-radius: 12px; padding: 12px 18px; font-weight: 700; }
+.btn.ghost { background: var(--card); color: var(--fg); border: 1px solid var(--border); }
+.btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.examples { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+.chip { border: 1px solid var(--border); background: var(--card); color: var(--fg); padding: 8px 12px; border-radius: 999px; font-size: .9rem; }
+.chat { display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 85%; padding: 12px 14px; border-radius: 14px; }
+.msg.user { align-self: flex-end; background: var(--accent); color: var(--accent-fg); }
+.msg.bot { align-self: flex-start; background: var(--card); border: 1px solid var(--border); }
+.msg-input-row { display: flex; gap: 8px; margin-top: 12px; }
+.msg-input-row input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
+.tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.tool-card { text-align: left; border: 1px solid var(--border); background: var(--card); border-radius: 14px; padding: 14px; color: var(--fg); }
+.tool-card:hover { border-color: var(--accent); }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.field input, .field select { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
+.pt-grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 3px; overflow-x: auto; }
+.el { border-radius: 6px; border: 1px solid rgba(0,0,0,.08); padding: 4px 2px; font-size: .7rem; text-align: center; cursor: pointer; min-width: 40px; }
+.el b { display: block; font-size: .8rem; }
+@media (max-width: 760px) {
+  .menu-btn { display: block; }
+  .nav { display: none; width: 100%; order: 3; }
+  .nav.open { display: flex; flex-direction: column; }
+  .msg { max-width: 95%; }
+}
