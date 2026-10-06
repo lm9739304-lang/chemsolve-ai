@@ -24,7 +24,7 @@ export default function SolverPage() {
       setChecking(false)
       return
     }
-    const m = answerFor(text)
+    const m = answerFor(text, 'full', lastSolution)
     setMessages(ms => [...ms, m])
     if (m.solution) addHistory({ input: text, topic: m.solution.topic, answer: m.solution.answer })
   }
@@ -54,7 +54,7 @@ export default function SolverPage() {
         : `OCR detected: ${res.text}`
       setMessages(ms => [...ms, { role: 'bot', text: note }])
       if (!res.needsConfirmation) {
-        const m = answerFor(res.text)
+        const m = answerFor(res.text, 'full', lastSolution)
         setMessages(ms => [...ms, m])
         if (m.solution) addHistory({ input: res.text, topic: m.solution.topic, answer: m.solution.answer })
       } else {

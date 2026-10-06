@@ -84,23 +84,70 @@ export function molecularFormula(empirical: string, molarMassValue: number): str
   return s
 }
 
-const UNIT_FACTORS: Record<string, Record<string, number>> = {
-  L: { mL: 1000, L: 1, m3: 0.001 },
-  mL: { L: 0.001, mL: 1, m3: 1e-6 },
-  g: { kg: 0.001, g: 1, mg: 1000 },
-  kg: { g: 1000, kg: 1, mg: 1e6 },
+// Oxidation state via standard rules: assign known elements, then solve charge balance.
+export function oxidationState(formula: string, target: string): { value: number | null; steps: string[] } {
+  const r = parseFormula(formula)
+  if (!r.ok) return { value: null, steps: ['Công thức không hợp lệ'] }
+  const known: Record<string, number> = {
+    H: 1, O: -2, F: -1, Cl: -1, Br: -1, I: -1,
+    Li: 1, Na: 1, K: 1, Rb: 1, Cs: 1,
+    Be: 2, Mg: 2, Ca: 2, Sr: 2, Ba: 2,
+    Al: 3, Zn: 2, Cd: 2, Ag: 1,
+  }
+  const counts: Record<string, number> = r.elements
+  const others: string[] = Object.keys(counts).filter(e => e !== target)
+  let otherSum = 0
+  const steps: string[] = []
+  for (const e of others) {
+    if (known[e] !== undefined) {
+      otherSum += known[e] * counts[e]
+      steps.push(`${e}: ${known[e]} (quy tắc)`)
+    } else {
+      return { value: null, steps: [...steps, `Không đủ dữ liệu: chưa biết số oxi hóa của ${e}`] }
+    }
+  }
+  if (counts[target] === undefined) return { value: null, steps: [`Không tìm thấy ${target} trong ${formula}`] }
+  // sum(OS_i·count) = charge
+  const value = (r.charge - otherSum) / counts[target]
+  steps.push(`${counts[target]}·x = ${r.charge} - (${otherSum})`)
+  steps.push(`x = ${value}`)
+  return { value, steps }
+}
+
+// dimension -> unit -> 'how many base units in 1 <unit>'
+const UNIT_BASE: Record<string, Record<string, number>> = {
+  vol: { L: 1, mL: 0.001, m3: 1000 },
+  mass: { g: 1, kg: 1000, mg: 0.001 },
+  press: { kPa: 1, Pa: 0.001, atm: 101.325, bar: 100, mmHg: 101.325 / 760 },
+  energy: { kJ: 1, J: 0.001, kcal: 4.184, cal: 0.004184 },
+  amount: { mol: 1, mmol: 0.001, kmol: 1000 },
+}
+
+const UNIT_ALIASES: Record<string, string> = {
+  'lít': 'L', 'lit': 'L', 'l': 'L', 'ml': 'mL', 'gam': 'g', 'gram': 'g', 'kpa': 'kPa', 'mol/l': 'M', 'm': 'M',
+}
+
+function dimensionOf(unit: string): string | null {
+  for (const [dim, units] of Object.entries(UNIT_BASE)) if (units[unit] !== undefined) return dim
+  return null
 }
 
 export function convertUnits(value: number, from: string, to: string): CalcResult {
-  const table = UNIT_FACTORS[from]
-  if (table && table[to] !== undefined) {
-    return { value: value * table[to], unit: to, steps: [`${value} ${from} · ${table[to]} = ${value * table[to]} ${to}`] }
+  from = UNIT_ALIASES[from] ?? from
+  to = UNIT_ALIASES[to] ?? to
+  if (from === 'mol' && to === 'particles') return { value: value * 6.022e23, unit: 'particles', steps: [`N = n·NA = ${value} · 6.022e23`] }
+  if (from === 'particles' && to === 'mol') return { value: value / 6.022e23, unit: 'mol', steps: [`n = N/NA`] }
+  if (from === 'C' && to === 'K') return { value: value + 273.15, unit: 'K', steps: [`K = °C + 273.15`] }
+  if (from === 'K' && to === 'C') return { value: value - 273.15, unit: '°C', steps: [`°C = K - 273.15`] }
+  if (from === 'C' && to === 'F') return { value: value * 9/5 + 32, unit: '°F', steps: [`°F = °C·9/5 + 32`] }
+  if (from === 'F' && to === 'C') return { value: (value - 32) * 5/9, unit: '°C', steps: [`°C = (°F-32)·5/9`] }
+  const dFrom = dimensionOf(from), dTo = dimensionOf(to)
+  if (dFrom && dFrom === dTo) {
+    const table = UNIT_BASE[dFrom]
+    const v = (value * table[from]) / table[to]
+    return { value: v, unit: to, steps: [`${value} ${from} = ${v} ${to}`] }
   }
-  // inverse lookup
-  for (const [base, tos] of Object.entries(UNIT_FACTORS)) {
-    if (tos[from] !== undefined && tos[to] !== undefined) {
-      return { value: (value * tos[from]) / tos[to], unit: to, steps: [`chuyển ${from} -> ${to}`] }
-    }
-  }
+  // concentration: M == mol/L, so treat 1 M as 1 mol/L
+  if ((from === 'M' || from === 'mol/L') && to === 'mol') return { value: NaN, unit: to, steps: ['Cần thể tích để đổi nồng độ sang số mol'] }
   return { value: NaN, unit: to, steps: ['Đơn vị không hỗ trợ'] }
 }

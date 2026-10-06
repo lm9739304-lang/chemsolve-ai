@@ -58,3 +58,19 @@ describe('unit conversion', () => {
   it('converts mL to L', () => expect(convertUnits(500, 'mL', 'L').value).toBeCloseTo(0.5, 5))
   it('converts g to kg', () => expect(convertUnits(1500, 'g', 'kg').value).toBeCloseTo(1.5, 5))
 })
+
+
+describe('oxidation state', () => {
+  it('S in H2SO4 = +6', async () => {
+    const { oxidationState } = await import('../../src/chem/formulas')
+    expect(oxidationState('H2SO4', 'S').value).toBe(6)
+  })
+  it('Cr in K2Cr2O7 = +6', async () => {
+    const { oxidationState } = await import('../../src/chem/formulas')
+    expect(oxidationState('K2Cr2O7', 'Cr').value).toBe(6)
+  })
+  it('Cl in HCl = -1', async () => {
+    const { oxidationState } = await import('../../src/chem/formulas')
+    expect(oxidationState('HCl', 'Cl').value).toBe(-1)
+  })
+})

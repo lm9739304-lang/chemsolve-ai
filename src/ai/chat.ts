@@ -10,8 +10,8 @@ export interface ChatMessage {
   mode?: Mode
 }
 
-export function answerFor(input: string, mode: Mode = 'full'): ChatMessage {
-  const s = solveQuestion(input)
+export function answerFor(input: string, mode: Mode = 'full', prev?: Solution): ChatMessage {
+  const s = solveQuestion(input, prev)
   return { role: 'bot', text: s.answer, solution: s, mode }
 }
 

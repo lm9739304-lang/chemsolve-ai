@@ -40,3 +40,12 @@ describe('balanceEquation', () => {
     }
   })
 })
+
+
+describe('redox balancing', () => {
+  it('balances K2Cr2O7 + HCl -> KCl + CrCl3 + Cl2 + H2O', () => {
+    const r = balanceEquation('K2Cr2O7 + HCl -> KCl + CrCl3 + Cl2 + H2O')
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.balanced).toContain('K2Cr2O7')
+  })
+})
