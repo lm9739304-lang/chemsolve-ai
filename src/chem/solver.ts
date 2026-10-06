@@ -257,6 +257,26 @@ function detectAsk(low: string): { kind: AskKind; species: string } {
   return { kind: 'unknown', species: '' }
 }
 
+function describeFormula(f: string): { elementsDesc: string; M: number | null; ok: boolean } {
+  const p = parseFormula(f)
+  if (!p.ok) return { elementsDesc: '', M: null, ok: false }
+  const parts = Object.entries(p.elements).map(([el, n]) => {
+    const ge = getElement(el)
+    return `${el} (${ge?.name ?? '?'}) ×${n}`
+  })
+  const M = molarMass(f)
+  return { elementsDesc: parts.join(', '), M: isNaN(M) ? null : M, ok: true }
+}
+
+function firstFormula(t: string): string | null {
+  const tokens = t.match(/[A-Za-z0-9()[\]]+/g) ?? []
+  for (const tok of tokens) {
+    const r = parseFormula(tok)
+    if (r.ok && Object.keys(r.elements).length > 0 && /[A-Z]/.test(tok)) return tok
+  }
+  return null
+}
+
 function findSpecRef(low: string): string {
   const m = low.match(/(?:của|of|của\s*)?\s*([A-Za-z][A-Za-z0-9()]*)\s*(?:$|ở|thu|\?)/)
   return m ? capFormula(m[1]) : ''
@@ -315,6 +335,50 @@ export function solveQuestion(input: string, prev?: Solution): Solution {
     return { ...missing(input, lang), topic: 'balance', answer: r.error ?? 'Không thể cân bằng' }
   }
 
+  // balance intent but NO full equation provided -> clarify instead of failing
+  if (/(balance|cân bằng|can bang)/.test(low)) {
+    const f = firstFormula(t)
+    if (f) {
+      const d = describeFormula(capFormula(f))
+      return {
+        topic: 'formula-info', language: lang,
+        interpretation: lang === 'vi' ? `Yêu cầu 'cân bằng' nhưng ${f} là một công thức hóa học, không phải phương trình đầy đủ.` : `'balance' requested, but ${f} is a formula, not a complete equation.`,
+        given: [f], find: '',
+        equation: null, formula: '', conversions: [],
+        steps: d.ok ? [lang === 'vi' ? `${f} cấu tạo từ: ${d.elementsDesc}` : `${f} consists of: ${d.elementsDesc}`, d.M ? `M(${f}) ≈ ${round(d.M, 2)} g/mol` : ''] : [],
+        answer: lang === 'vi'
+          ? `${f} là công thức hóa học. Đây không phải một phương trình phản ứng. Nếu bạn muốn cân bằng phương trình chứa ${f}, hãy gửi đầy đủ phương trình, ví dụ: H2 + O2 -> H2O.`
+          : `${f} is a chemical formula, not a reaction equation. To balance an equation containing ${f}, send the full equation, e.g.: H2 + O2 -> H2O.`,
+        verification: '✓ Đã nhận dạng đúng yêu cầu', verified: true, missingInfo: lang === 'vi' ? 'Cần phương trình đầy đủ để cân bằng' : 'Need the full equation to balance',
+      }
+    }
+    return {
+      topic: 'balance', language: lang, interpretation: t, given: [], find: '',
+      equation: null, formula: '', conversions: [], steps: [],
+      answer: lang === 'vi' ? 'Cân bằng một phương trình phản ứng đầy đủ, ví dụ: "Cân bằng H2 + O2 -> H2O".' : 'Provide a full reaction equation to balance, e.g. "Balance H2 + O2 -> H2O".',
+      verification: '⚠ Needs more information', verified: false, missingInfo: lang === 'vi' ? 'Thiếu phương trình' : 'Missing equation',
+    }
+  }
+
+  // formula composition question: "H2O gồm những nguyên tố nào?"
+  if (/(gồm|các nguyên tố|thành phần|cấu tạo|nguyên tử|các nguyên tố|elements|what is .*made of|composition)/i.test(low)) {
+    const f = firstFormula(t)
+    if (f) {
+      const d = describeFormula(capFormula(f))
+      if (d.ok) {
+        return {
+          topic: 'formula-info', language: lang,
+          interpretation: lang === 'vi' ? `Cấu tạo của ${f}` : `Composition of ${f}`,
+          given: [f], find: '',
+          equation: null, formula: '', conversions: [],
+          steps: [lang === 'vi' ? `${f}: ${d.elementsDesc}` : `${f}: ${d.elementsDesc}`, d.M ? `M(${f}) ≈ ${round(d.M, 2)} g/mol` : ''],
+          answer: lang === 'vi' ? `${f} gồm: ${d.elementsDesc}.` : `${f} consists of: ${d.elementsDesc}.`,
+          verification: '✓ Đã xác định từ công thức', verified: true, missingInfo: null,
+        }
+      }
+    }
+  }
+
   // 1. percent yield
   if (/(yield|hiệu suất|hieu suat)/.test(low)) {
     const nums = low.match(/\d+[.,]?\d*/g)?.map(s => parseFloat(s.replace(',', '.'))) ?? []
@@ -333,9 +397,9 @@ export function solveQuestion(input: string, prev?: Solution): Solution {
   }
 
   // 2. molar mass
-  if (/(molar mass|khối lượng mol|khoi luong mol)/.test(low)) {
-    const fm = t.match(/(?:molar mass of|khối lượng mol của|khoi luong mol cua|M\()\s*\(?\s*([A-Za-z0-9()]+)/i)
-    const candidate = fm ? capFormula(fm[1]) : null
+  if (/(molar mass|khối lượng mol|khoi luong mol|phân tử khối|phan tu khoi|khối lượng phân tử|molar mass of)/.test(low)) {
+    const fm = t.match(/(?:molar mass of|khối lượng mol của|khoi luong mol cua|phân tử khối của|phan tu khoi cua|phân tử khối|phan tu khoi|M\()\s*\(?\s*([A-Za-z0-9()]+)/i)
+    const candidate = fm ? capFormula(fm[1]) : (firstFormula(t) ? capFormula(firstFormula(t)!) : null)
     if (candidate) {
       const M = molarMass(candidate)
       if (!isNaN(M)) {
@@ -658,6 +722,26 @@ export function solveQuestion(input: string, prev?: Solution): Solution {
         steps: [`n = ${gasVGiven.value}/22.4 = ${round(n, 4)} mol`],
         answer: `n = ${round(n, 4)} mol`,
         verification: '✓ Đã kiểm tra đơn vị', verified: true, missingInfo: null,
+      }
+    }
+  }
+
+  // Numeric request missing its required datum -> explain what is needed
+  {
+    const ask = detectAsk(low)
+    const sp = ask.species ? ` của ${capFormula(ask.species)}` : ''
+    let msg: string | null = null
+    if (ask.kind === 'moles') msg = lang === 'vi' ? `Để tính số mol${sp}, cần biết thêm: khối lượng (g), thể tích khí ở đktc (L), hoặc số hạt.` : `To compute moles${sp}, provide mass (g), gas volume at STP (L), or particle count.`
+    else if (ask.kind === 'gasVolume') msg = lang === 'vi' ? `Để tính thể tích${sp}${/đktc/.test(low) ? ' ở đktc' : ''}, cần biết khối lượng (g) hoặc số mol.` : `To compute the volume${sp}${/stp/.test(low) ? ' at STP' : ''}, provide mass (g) or moles.`
+    else if (ask.kind === 'mass') msg = lang === 'vi' ? `Để tính khối lượng${sp}, cần biết số mol hoặc nồng độ/thể tích.` : `To compute the mass${sp}, provide moles or concentration and volume.`
+    else if (ask.kind === 'concentration') msg = lang === 'vi' ? `Để tính nồng độ, cần biết số mol chất tan và thể tích dung dịch (L).` : `To compute concentration, provide moles of solute and solution volume (L).`
+    else if (ask.kind === 'pH') msg = lang === 'vi' ? `Để tính pH, cần biết nồng độ mol (M) của axit hoặc bazơ.` : `To compute pH, provide the molar concentration (M) of the acid/base.`
+    if (msg) {
+      return {
+        topic: 'calculation', language: lang,
+        interpretation: lang === 'vi' ? `Yêu cầu tính toán: ${input}` : `Calculation request: ${input}`,
+        given: [], find: ask.kind, equation: null, formula: '', conversions: [], steps: [],
+        answer: msg, verification: '⚠ Needs more information', verified: false, missingInfo: msg,
       }
     }
   }
