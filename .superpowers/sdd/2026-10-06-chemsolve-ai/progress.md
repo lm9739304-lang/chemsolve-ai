@@ -2,3 +2,5 @@
 
 Pre-flight: no shared interfaces with other plans; self-consistent.
 
+
+Task 1: complete (tests: npm run build → pass)
