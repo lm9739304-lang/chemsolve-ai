@@ -51,4 +51,15 @@ describe('general solver (never hardcoded)', () => {
     expect(s.verified).toBe(false)
     expect(s.missingInfo).toBeTruthy()
   })
+
+  it('balances an acid-base reaction (unseen)', () => {
+    const s = solveQuestion('Cân bằng H2SO4 + NaOH -> Na2SO4 + H2O')
+    expect(s.topic).toBe('balance')
+    expect(s.answer).toContain('H2SO4 + 2NaOH -> Na2SO4 + 2H2O')
+  })
+  it('balances ethanol combustion (unseen)', () => {
+    const s = solveQuestion('Balance C2H5OH + O2 -> CO2 + H2O')
+    expect(s.topic).toBe('balance')
+    expect(s.answer).toContain('C2H5OH + 3O2 -> 2CO2 + 3H2O')
+  })
 })
